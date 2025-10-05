@@ -1,0 +1,164 @@
+{
+  "layer": "top",
+  "position": "top",
+  "exclusive": true,
+  "height": 43,
+  "spacing": 4,
+  "margin-left": 20,
+  "margin-top": 0,
+  "margin-right": 20,
+
+  // === LEWA STRONA ===
+  "modules-left": [
+    "custom/sep_left_alt",
+    "clock#date",
+    "clock",
+    "hyprland/workspaces",
+    "network"
+  ],
+
+  // === ŚRODEK ===
+  "modules-center": ["custom/archlogo"],
+
+  // === PRAWA STRONA ===
+  "modules-right": [
+    "tray",
+    "custom/coffee",
+    "custom/powerprofile",
+    "battery",
+    "temperature",
+    "pulseaudio",
+
+    "custom/sep_right_alt",
+    "custom/power",
+    "custom/sep_right_alt"
+  ],
+
+  // === MODUŁY ===
+
+  "custom/powerprofile": {
+        "format": "{}",
+        "return-type": "json",
+        "exec": "~/.config/hypr/scripts/toggle_power_profile.sh",
+        "on-click": "~/.config/hypr/scripts/toggle_power_profile.sh --toggle",
+        "interval": 5, // Update frequently to show current state, or adjust as needed
+        "tooltip": true
+    },
+
+  "network": {
+    "format-wifi": "󰖩 {essid}",
+
+    "format-ethernet": " ",
+
+    "format-disconnected": "󰖪 Off",
+
+    "tooltip-format": "{ifname} ({ipaddr})",
+
+    "on-click": "kitty -e nmtui"
+  },
+
+  "battery": {
+    "interval": 60,
+    "states": {
+	"full": 100,
+	"almost": 75,
+	"half": 50,
+        "warning": 35,
+        "critical": 15
+    },
+    "format": "{icon}  {capacity}%",
+    "format-icons": ["", "", "", "", ""],
+    "max-length": 25
+  },
+
+  "temperature": {
+	"format": "  {temperatureC}°C"
+  },
+  "memory": {
+    "format": "  {percentage}%", // Wyświetla tylko procentowe zużycie
+    "tooltip": true, // Włącza tooltip
+    "tooltip-format": "{used:0.1f}G / {total:0.1f}G ({percentage}%)", // Format tooltipu z dokładnymi danymi i procentem
+    "interval": 5
+  },
+
+  "custom/sep_left": { "format": " <span>|</span> ", "tooltip": false },
+
+  "custom/sep_left_alt": { "format": "<span>|</span> ", "tooltip": false }, // Możesz użyć innych separatorów
+
+  "hyprland/workspaces": {
+    "format": "  {id}", // Wyświetla numer przestrzeni roboczej (1, 2, 3, itd.)
+  },
+
+  "custom/archlogo": {
+    "format": "<span font_weight='bold' size='medium'></span>",
+    "tooltip": false
+  },
+
+  "clock": {
+    "format": "  {:%H:%M}",
+
+    "tooltip": false,
+
+    "locale": "pl_PL.UTF-8"
+  },
+
+  "clock#date": {
+    "format": "  {:L%A, %d %B}",
+    "locale": "pl_PL.UTF-8",
+    "tooltip": true,
+    "tooltip-format": "<tt>{calendar}</tt>",
+    "calendar": {
+      "mode": "month",
+      "locale": "pl_PL.UTF-8",
+      "first-weekday": 1,
+      "on-scroll-up": "shift_down",
+      "on-scroll-down": "shift_up"
+    },
+    "actions": { "on-click-right": "mode" }
+  },
+
+  "pulseaudio": {
+    "format": "{icon}  {volume}%",
+
+    "format-muted": "󰝟 Wyciszono",
+
+    "format-icons": {
+      "default": ["", "", ""]
+    },
+
+    "on-click-middle": "pamixer --toggle-mute",
+
+    "on-scroll-up": "pamixer --increase 2",
+
+    "on-scroll-down": "pamixer --decrease 2"
+  },
+
+  "custom/sep_right": { "format": " <span>|</span> ", "tooltip": false },
+
+  "custom/sep_right_alt": { "format": "<span>|</span> ", "tooltip": false },
+
+  "tray": {
+    "icon-size": 20,
+
+    "spacing": 8
+  },
+
+  "custom/coffee": {
+    "format": "{}", 
+    "tooltip": true,
+    "tooltip-format": "{status}",
+    "return-type": "json",
+    "exec": "~/.config/hypr/scripts/coffee_mode_status.sh",
+    "on-click": "~/.config/hypr/scripts/toggle_idle.sh"
+  },
+
+  "custom/power": {
+    // Twoje menu zasilania
+
+    "format": "󰐥", // Ikona Power z Nerd Fonts
+
+    "tooltip": false,
+
+    "on-click": "~/.config/hypr/scripts/powermenu_pywal.sh"
+  }
+}
