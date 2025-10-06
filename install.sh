@@ -3,7 +3,10 @@
 # Hyprland Dotfiles Installer Script
 # This script installs and configures Hyprland with all necessary dependencies
 
-set -e  # Exit on any error
+# Exit on errors, but allow controlled error handling
+set -e
+# Allow error handling in functions
+set -E
 
 # Colors for output
 RED='\033[0;31m'
@@ -60,7 +63,7 @@ install_packages() {
             print_status "Installing packages for Arch Linux..."
             sudo pacman -Syu --needed --noconfirm \
                 hyprland hyprpaper hypridle hyprlock \
-                waybar rofi wofi mako kitty \
+                waybar rofi rofi-emoji wofi mako kitty \
                 grim slurp wl-clipboard cliphist \
                 brightnessctl pamixer \
                 python-pywal \
@@ -73,7 +76,16 @@ install_packages() {
                 fastfetch \
                 cava \
                 ttf-nerd-fonts-symbols-mono \
-                noto-fonts noto-fonts-emoji
+                noto-fonts noto-fonts-emoji \
+                jq \
+                power-profiles-daemon \
+                ydotool
+            
+            # Enable power-profiles-daemon service
+            sudo systemctl enable --now power-profiles-daemon 2>/dev/null || true
+            
+            # Enable ydotool service for emoji picker
+            sudo systemctl enable --now ydotool.service 2>/dev/null || true
             ;;
         "apt")
             print_status "Installing packages for Ubuntu/Debian..."
@@ -91,13 +103,24 @@ install_packages() {
                 blueman \
                 fastfetch \
                 cava \
-                fonts-noto fonts-noto-color-emoji
+                fonts-noto fonts-noto-color-emoji \
+                jq \
+                power-profiles-daemon 2>/dev/null || true
             
             # Install pywal via pip
             pip3 install --user pywal
             
+            # Try to install ydotool if available
+            sudo apt install -y ydotool 2>/dev/null || print_warning "ydotool not available, emoji picker paste may not work"
+            
+            # Enable power-profiles-daemon if available
+            sudo systemctl enable --now power-profiles-daemon 2>/dev/null || true
+            sudo systemctl enable --now ydotool.service 2>/dev/null || true
+            
             # Note: hyprpaper, hypridle, hyprlock may need to be compiled from source on Ubuntu
             print_warning "Some Hyprland components may need manual compilation on Ubuntu/Debian"
+            print_warning "rofi-emoji plugin may need to be installed manually from: https://github.com/Mange/rofi-emoji"
+            print_warning "If power-profiles-daemon is not available, power profile switching will be disabled"
             ;;
         "dnf")
             print_status "Installing packages for Fedora..."
@@ -114,10 +137,19 @@ install_packages() {
                 blueman \
                 fastfetch \
                 cava \
-                google-noto-fonts google-noto-emoji-fonts
+                google-noto-fonts google-noto-emoji-fonts \
+                jq \
+                power-profiles-daemon \
+                ydotool 2>/dev/null || true
             
             # Install pywal via pip
             pip3 install --user pywal
+            
+            # Enable services
+            sudo systemctl enable --now power-profiles-daemon 2>/dev/null || true
+            sudo systemctl enable --now ydotool.service 2>/dev/null || true
+            
+            print_warning "rofi-emoji may need to be installed manually from: https://github.com/Mange/rofi-emoji"
             ;;
         *)
             print_error "Unsupported package manager: $pm"
@@ -130,10 +162,26 @@ install_packages() {
 create_directories() {
     print_status "Creating configuration directories..."
     
-    mkdir -p ~/.config/{hypr,waybar,kitty,mako,rofi,cava,fastfetch}
+    # Create config directories
+    mkdir -p ~/.config/{hypr,waybar,kitty,mako,rofi,cava,fastfetch,nvim,wal}
     mkdir -p ~/.config/hypr/scripts
+    mkdir -p ~/.config/rofi/themes
+    mkdir -p ~/.config/wal/templates
+    
+    # Create local directories
     mkdir -p ~/.local/share/wallpapers
+    
+    # Create oh-my-zsh custom themes directory
+    mkdir -p ~/.oh-my-zsh/custom/themes
+    
+    # Create cache directory
     mkdir -p ~/.cache/wal
+    
+    # Verify critical directories were created
+    if [ ! -d ~/.config/hypr ]; then
+        print_error "Failed to create ~/.config/hypr directory"
+        return 1
+    fi
     
     print_success "Directories created successfully"
 }
@@ -145,12 +193,20 @@ backup_configs() {
     local backup_dir="$HOME/.config/dotfiles_backup_$(date +%Y%m%d_%H%M%S)"
     mkdir -p "$backup_dir"
     
-    for dir in hypr waybar kitty mako rofi cava fastfetch; do
+    # Backup config directories
+    for dir in hypr waybar kitty mako rofi cava fastfetch nvim wal; do
         if [ -d "$HOME/.config/$dir" ]; then
             print_status "Backing up $dir configuration..."
             cp -r "$HOME/.config/$dir" "$backup_dir/"
         fi
     done
+    
+    # Backup oh-my-zsh custom theme if it exists
+    if [ -f "$HOME/.oh-my-zsh/custom/themes/custom_prompt.zsh-theme" ]; then
+        print_status "Backing up oh-my-zsh custom theme..."
+        mkdir -p "$backup_dir/oh-my-zsh/custom/themes"
+        cp "$HOME/.oh-my-zsh/custom/themes/custom_prompt.zsh-theme" "$backup_dir/oh-my-zsh/custom/themes/"
+    fi
     
     if [ "$(ls -A $backup_dir 2>/dev/null)" ]; then
         print_success "Backup created at: $backup_dir"
@@ -164,23 +220,70 @@ backup_configs() {
 install_dotfiles() {
     print_status "Installing dotfiles..."
     
+    # Verify we're in the correct directory
+    if [ ! -d "hypr" ] || [ ! -d "waybar" ]; then
+        print_error "Required directories not found. Are you in the dotfiles directory?"
+        return 1
+    fi
+    
     # Copy configuration files
-    cp -r hypr/* ~/.config/hypr/
-    cp -r waybar/* ~/.config/waybar/
-    cp -r kitty/* ~/.config/kitty/
-    cp -r mako/* ~/.config/mako/
-    cp -r cava/* ~/.config/cava/
-    cp -r fastfetch/* ~/.config/fastfetch/
+    print_status "Copying Hyprland configuration..."
+    cp -r hypr/* ~/.config/hypr/ || { print_error "Failed to copy hypr config"; return 1; }
+    
+    print_status "Copying Waybar configuration..."
+    cp -r waybar/* ~/.config/waybar/ || { print_error "Failed to copy waybar config"; return 1; }
+    
+    print_status "Copying terminal and app configurations..."
+    cp -r kitty/* ~/.config/kitty/ || { print_error "Failed to copy kitty config"; return 1; }
+    cp -r mako/* ~/.config/mako/ || { print_error "Failed to copy mako config"; return 1; }
+    cp -r cava/* ~/.config/cava/ || { print_error "Failed to copy cava config"; return 1; }
+    cp -r fastfetch/* ~/.config/fastfetch/ || { print_error "Failed to copy fastfetch config"; return 1; }
+    
+    # Copy Neovim configuration
+    if [ -d "nvim" ]; then
+        print_status "Copying Neovim configuration..."
+        cp -r nvim/* ~/.config/nvim/ || print_warning "Failed to copy nvim config"
+    else
+        print_warning "Neovim config directory not found, skipping..."
+    fi
+    
+    # Copy Rofi configuration
+    if [ -d "rofi" ]; then
+        print_status "Copying Rofi configuration..."
+        cp -r rofi/* ~/.config/rofi/ || print_warning "Failed to copy rofi config"
+    fi
+    
+    # Copy oh-my-zsh custom theme
+    if [ -d "oh-my-zsh" ] && [ -d ~/.oh-my-zsh ]; then
+        print_status "Copying oh-my-zsh custom theme..."
+        cp oh-my-zsh/custom_prompt.zsh-theme ~/.oh-my-zsh/custom/themes/ || print_warning "Failed to copy zsh theme"
+    elif [ -d "oh-my-zsh" ]; then
+        print_warning "oh-my-zsh not installed. Theme available in: $(pwd)/oh-my-zsh/"
+    fi
     
     # Copy wallpapers
-    cp wallpapers/* ~/.local/share/wallpapers/
+    if [ -d "wallpapers" ] && [ "$(ls -A wallpapers 2>/dev/null)" ]; then
+        print_status "Copying wallpapers..."
+        cp wallpapers/* ~/.local/share/wallpapers/ || print_warning "Failed to copy wallpapers"
+    else
+        print_error "No wallpapers found!"
+        return 1
+    fi
     
     # Copy wal templates
-    mkdir -p ~/.config/wal/templates
-    cp wal/templates/* ~/.config/wal/templates/
+    if [ -d "wal/templates" ]; then
+        print_status "Copying Pywal templates..."
+        cp wal/templates/* ~/.config/wal/templates/ || print_warning "Failed to copy wal templates"
+    else
+        print_error "Wal templates not found!"
+        return 1
+    fi
     
     # Make scripts executable
-    chmod +x ~/.config/hypr/scripts/*
+    if [ -d ~/.config/hypr/scripts ]; then
+        print_status "Making scripts executable..."
+        chmod +x ~/.config/hypr/scripts/* || print_warning "Failed to make scripts executable"
+    fi
     
     print_success "Dotfiles installed successfully"
 }
@@ -376,6 +479,10 @@ EOF
     # Update Waybar config paths
     sed -i "s|~/.config/hypr/scripts/|$HOME/.config/hypr/scripts/|g" ~/.config/waybar/config.jsonc
     
+    # Fix hardcoded home directory in Waybar CSS
+    sed -i "s|HOME_PLACEHOLDER|$HOME|g" ~/.config/waybar/style.css
+    sed -i "s|/home/[^/]*/|$HOME/|g" ~/.config/waybar/style.css
+    
     print_success "Configuration paths fixed"
 }
 
@@ -383,12 +490,42 @@ EOF
 setup_pywal() {
     print_status "Setting up pywal with default wallpaper..."
     
-    # Generate color scheme from default wallpaper
-    if command_exists wal; then
-        wal -i ~/.local/share/wallpapers/blue.jpg -n
-        print_success "Pywal color scheme generated"
+    # Check if pywal is available
+    if ! command_exists wal; then
+        print_error "Pywal not found! Colors will not work correctly."
+        print_status "Installing pywal..."
+        pip3 install --user pywal || {
+            print_error "Failed to install pywal via pip"
+            return 1
+        }
+    fi
+    
+    # Check if default wallpaper exists
+    local default_wallpaper="$HOME/.local/share/wallpapers/blue.jpg"
+    if [ ! -f "$default_wallpaper" ]; then
+        print_error "Default wallpaper not found at: $default_wallpaper"
+        print_warning "Looking for any available wallpaper..."
+        
+        # Try to find any wallpaper
+        local any_wallpaper=$(find ~/.local/share/wallpapers/ -type f \( -iname "*.jpg" -o -iname "*.png" \) | head -n 1)
+        
+        if [ -n "$any_wallpaper" ]; then
+            print_status "Using wallpaper: $any_wallpaper"
+            wal -i "$any_wallpaper" -n
+            print_success "Pywal color scheme generated"
+        else
+            print_error "No wallpapers found! Please add wallpapers to ~/.local/share/wallpapers/"
+            return 1
+        fi
     else
-        print_warning "Pywal not found, colors may not work correctly"
+        # Generate color scheme from default wallpaper
+        wal -i "$default_wallpaper" -n
+        if [ $? -eq 0 ]; then
+            print_success "Pywal color scheme generated successfully"
+        else
+            print_error "Failed to generate color scheme with pywal"
+            return 1
+        fi
     fi
 }
 
@@ -437,16 +574,48 @@ main() {
         exit 0
     fi
     
-    # Installation steps
-    install_packages
-    create_directories
-    backup_configs
-    install_dotfiles
-    create_hyprlock_config
-    create_rofi_theme
-    fix_config_paths
-    setup_pywal
-    enable_services
+    # Installation steps with error handling
+    print_status "Step 1/9: Installing packages..."
+    if ! install_packages; then
+        print_error "Package installation failed!"
+        exit 1
+    fi
+    
+    print_status "Step 2/9: Creating directories..."
+    if ! create_directories; then
+        print_error "Directory creation failed!"
+        exit 1
+    fi
+    
+    print_status "Step 3/9: Backing up existing configurations..."
+    backup_configs || print_warning "Backup step had issues, but continuing..."
+    
+    print_status "Step 4/9: Installing dotfiles..."
+    if ! install_dotfiles; then
+        print_error "Dotfiles installation failed!"
+        exit 1
+    fi
+    
+    print_status "Step 5/9: Creating Hyprlock configuration..."
+    create_hyprlock_config || print_warning "Hyprlock config creation failed, continuing..."
+    
+    print_status "Step 6/9: Creating Rofi theme..."
+    create_rofi_theme || print_warning "Rofi theme creation failed, continuing..."
+    
+    print_status "Step 7/9: Fixing configuration paths..."
+    if ! fix_config_paths; then
+        print_error "Path fixing failed!"
+        exit 1
+    fi
+    
+    print_status "Step 8/9: Setting up Pywal color scheme..."
+    if ! setup_pywal; then
+        print_error "Pywal setup failed! Colors will not work correctly."
+        print_warning "You can run 'wal -i /path/to/wallpaper.jpg' manually later."
+    fi
+    
+    print_status "Step 9/9: Enabling system services..."
+    enable_services || print_warning "Some services may not have been enabled"
     
     print_success "Installation completed successfully!"
     print_status "Please log out and select Hyprland from your display manager."
@@ -454,15 +623,29 @@ main() {
     
     # Show next steps
     echo
-    print_status "Next steps:"
+    print_status "=== Next Steps ==="
     echo "1. Log out and select Hyprland session"
     echo "2. Press Super+S to open application launcher"
     echo "3. Press Super+Q to open terminal"
     echo "4. Press Super+X for power menu"
     echo "5. Customize wallpapers in ~/.local/share/wallpapers/"
     echo
+    print_status "=== New Features ==="
+    echo "✨ Dynamic Window Coloring - Windows adapt to wallpaper colors!"
+    echo "   - Change wallpaper with: wal -i /path/to/wallpaper.jpg"
+    echo "   - Adjust opacity in ~/.config/hypr/hyprland.conf"
+    echo "   - Customize blur and vibrancy settings"
+    echo
+    print_status "=== Key Bindings ==="
+    echo "Super+Q: Terminal          Super+X: Power Menu"
+    echo "Super+S: App Launcher      Super+K: Coffee Mode"
+    echo "Super+V: Clipboard         Super+Shift+S: Screenshot"
+    echo "Super+Period: Emoji Picker Super+I: Network Settings"
+    echo
     print_status "Configuration files are located in ~/.config/"
     print_status "Backup created in ~/.config/dotfiles_backup_* (if any existed)"
+    echo
+    print_success "Enjoy your new Hyprland setup with dynamic window coloring! 🎨"
 }
 
 # Run main function

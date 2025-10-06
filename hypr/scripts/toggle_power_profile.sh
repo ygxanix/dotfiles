@@ -22,9 +22,14 @@ get_current_profile_info() {
 }
 
 toggle_next_profile() {
+    # Check if powerprofilesctl is available
+    if ! check_powerprofilesctl; then
+        return 1
+    fi
+    
     if [ ! -f "$STATE_FILE" ]; then
         get_current_profile_info > /dev/null 
-        CURRENT_INDEX=$(cat "$STATE_FILE") 
+        CURRENT_INDEX=$(cat "$STATE_FILE" 2>/dev/null || echo "0") 
     else
         CURRENT_INDEX=$(cat "$STATE_FILE")
     fi
@@ -33,11 +38,13 @@ toggle_next_profile() {
 
     NEXT_PROFILE="${PROFILES[$NEXT_INDEX]}"
 
-    powerprofilesctl set "$NEXT_PROFILE"
-
-    echo "$NEXT_INDEX" > "$STATE_FILE"
-
-    get_current_profile_info
+    if powerprofilesctl set "$NEXT_PROFILE" 2>/dev/null; then
+        echo "$NEXT_INDEX" > "$STATE_FILE"
+        get_current_profile_info
+    else
+        echo "{\"text\":\"⚠️ Error\", \"tooltip\":\"Failed to set power profile\"}"
+        return 1
+    fi
 }
 
 if [ "$1" == "--toggle" ]; then
