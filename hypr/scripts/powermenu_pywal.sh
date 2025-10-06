@@ -37,6 +37,16 @@ ROFI_ARGS=(
     -theme-str "inputbar {enabled: false;}"
 )
 
+# Fallback to a minimal built-in theme if the external theme is missing
+if [ ! -f "$HOME/.config/rofi/themes/powermenu-pywal.rasi" ]; then
+  ROFI_ARGS+=( -theme-str "
+    * {background: #1e1e2e; foreground: #cdd6f4;}
+    window {padding: 10px;}
+    listview {lines: 6;}
+    element selected {background: #45475a;}
+  " )
+fi
+
 options="${LOGOUT_OPTION}\n${REBOOT_OPTION}\n${SHUTDOWN_OPTION}\n${CANCEL_OPTION}"
 chosen_raw=$(echo -e "$options" | rofi "${ROFI_ARGS[@]}")
 chosen_text_only=$(echo "$chosen_raw" | sed -e 's/<[^>]*>//g' -e 's/^[ \t]*[^ ]* //')
