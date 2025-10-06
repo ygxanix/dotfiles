@@ -8,6 +8,10 @@ _Personal configuration of dotfiles for Arch Linux (Hyprland targeted)_
 
 </div>
 
+## 📂 Installation
+
+For quick installation script please refer to [this issue](https://github.com/szymonwilczek/dotfiles/issues/1) or [this pull request](https://github.com/szymonwilczek/dotfiles/pull/2).
+
 ## 📸 Screenshots
 
 ![obraz](https://github.com/user-attachments/assets/cb3f9911-199b-44ae-8d86-e1385b79f877)
