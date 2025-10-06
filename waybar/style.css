@@ -1,5 +1,6 @@
 /* Importuj kolory wygenerowane przez Pywal */
-@import url("/home/wolfie/.cache/wal/colors-waybar.css");
+/* Path will be fixed during installation to match your username */
+@import url("HOME_PLACEHOLDER/.cache/wal/colors-waybar.css");
 
 /* --- Style ogólne --- */
 * {
