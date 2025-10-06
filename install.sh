@@ -73,7 +73,12 @@ install_packages() {
                 fastfetch \
                 cava \
                 ttf-nerd-fonts-symbols-mono \
-                noto-fonts noto-fonts-emoji
+                noto-fonts noto-fonts-emoji \
+                jq \
+                power-profiles-daemon
+            
+            # Enable power-profiles-daemon service
+            sudo systemctl enable --now power-profiles-daemon 2>/dev/null || true
             ;;
         "apt")
             print_status "Installing packages for Ubuntu/Debian..."
@@ -91,13 +96,19 @@ install_packages() {
                 blueman \
                 fastfetch \
                 cava \
-                fonts-noto fonts-noto-color-emoji
+                fonts-noto fonts-noto-color-emoji \
+                jq \
+                power-profiles-daemon 2>/dev/null || true
             
             # Install pywal via pip
             pip3 install --user pywal
             
+            # Enable power-profiles-daemon if available
+            sudo systemctl enable --now power-profiles-daemon 2>/dev/null || true
+            
             # Note: hyprpaper, hypridle, hyprlock may need to be compiled from source on Ubuntu
             print_warning "Some Hyprland components may need manual compilation on Ubuntu/Debian"
+            print_warning "If power-profiles-daemon is not available, power profile switching will be disabled"
             ;;
         "dnf")
             print_status "Installing packages for Fedora..."
@@ -114,10 +125,15 @@ install_packages() {
                 blueman \
                 fastfetch \
                 cava \
-                google-noto-fonts google-noto-emoji-fonts
+                google-noto-fonts google-noto-emoji-fonts \
+                jq \
+                power-profiles-daemon
             
             # Install pywal via pip
             pip3 install --user pywal
+            
+            # Enable power-profiles-daemon service
+            sudo systemctl enable --now power-profiles-daemon 2>/dev/null || true
             ;;
         *)
             print_error "Unsupported package manager: $pm"
@@ -376,6 +392,9 @@ EOF
     # Update Waybar config paths
     sed -i "s|~/.config/hypr/scripts/|$HOME/.config/hypr/scripts/|g" ~/.config/waybar/config.jsonc
     
+    # Fix hardcoded home directory in Waybar CSS
+    sed -i "s|/home/[^/]*/|$HOME/|g" ~/.config/waybar/style.css
+    
     print_success "Configuration paths fixed"
 }
 
@@ -454,15 +473,29 @@ main() {
     
     # Show next steps
     echo
-    print_status "Next steps:"
+    print_status "=== Next Steps ==="
     echo "1. Log out and select Hyprland session"
     echo "2. Press Super+S to open application launcher"
     echo "3. Press Super+Q to open terminal"
     echo "4. Press Super+X for power menu"
     echo "5. Customize wallpapers in ~/.local/share/wallpapers/"
     echo
+    print_status "=== New Features ==="
+    echo "✨ Dynamic Window Coloring - Windows adapt to wallpaper colors!"
+    echo "   - Change wallpaper with: wal -i /path/to/wallpaper.jpg"
+    echo "   - Adjust opacity in ~/.config/hypr/hyprland.conf"
+    echo "   - Customize blur and vibrancy settings"
+    echo
+    print_status "=== Key Bindings ==="
+    echo "Super+Q: Terminal          Super+X: Power Menu"
+    echo "Super+S: App Launcher      Super+K: Coffee Mode"
+    echo "Super+V: Clipboard         Super+Shift+S: Screenshot"
+    echo "Super+Period: Emoji Picker Super+I: Network Settings"
+    echo
     print_status "Configuration files are located in ~/.config/"
     print_status "Backup created in ~/.config/dotfiles_backup_* (if any existed)"
+    echo
+    print_success "Enjoy your new Hyprland setup with dynamic window coloring! 🎨"
 }
 
 # Run main function
