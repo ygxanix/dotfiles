@@ -18,11 +18,45 @@ _Personal configuration of dotfiles for Arch Linux (Hyprland targeted)_
 ![obraz](https://github.com/user-attachments/assets/0206be83-c734-4be9-8688-f0368737e228)
 ![obraz](https://github.com/user-attachments/assets/18186e50-f173-4d90-b78f-46775afb0e1f)
 
-### Prerequisites
+## 🚀 Quick Installation
 
-- **JetBrains Mono** and **Hack Nerd Font** fonts
-- I'm using Colloid Gtk `Nord` themes for icons and `gtk` applications
-- Pywall, for automatic changes of colors, when new wallpaper is being set up
+**Automated installer available!** Simply run:
+
+```bash
+git clone <your-repo-url>
+cd hyprland-dotfiles
+chmod +x install.sh
+./install.sh
+```
+
+The installer will:
+- Install all required packages for your distribution
+- Create proper directory structure
+- Backup existing configurations
+- Fix all path issues
+- Set up wallpapers and color schemes
+- Configure all components properly
+
+For detailed installation instructions, see [INSTALL.md](INSTALL.md)
+
+## 📦 What's Included
+
+- **Hyprland**: Modern Wayland compositor with beautiful animations
+- **Waybar**: Customizable status bar
+- **Rofi**: Application launcher and power menu
+- **Hyprpaper**: Wallpaper manager  
+- **Hyprlock**: Screen locker
+- **Hypridle**: Idle management
+- **Mako**: Notification daemon
+- **Kitty**: Terminal emulator
+- **Pywal**: Automatic color scheme generation
+- **Custom scripts**: Screenshot, power management, and more
+
+### Prerequisites (Auto-installed by script)
+
+- **Nerd Fonts** (installed automatically)
+- **Pywal** for automatic color changes when wallpaper is set
+- All Hyprland ecosystem components
 
 ## 🙏 Acknowledgments
 All the open-source projects that made these configurations possible

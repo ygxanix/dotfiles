@@ -33,7 +33,7 @@ ROFI_ARGS=(
     -i
     -p "System"
     -markup-rows
-    -theme "$HOME/.config/rofi/themes/powermenu-pywal.rasi"
+    -theme "~/.config/rofi/themes/powermenu-pywal.rasi"
     -theme-str "inputbar {enabled: false;}"
 )
 
